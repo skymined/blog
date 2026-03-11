@@ -1,5 +1,6 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { classNames } from "../util/lang"
+import { isAbsoluteURL, joinSegments, pathToRoot } from "../util/path"
 import style from "./styles/profileCard.scss"
 
 interface SocialLink {
@@ -23,18 +24,27 @@ const defaultLinks: SocialLink[] = [
 ]
 
 export default ((userOpts?: Options) => {
-  const ProfileCard: QuartzComponent = ({ displayClass }: QuartzComponentProps) => {
+  const ProfileCard: QuartzComponent = ({ displayClass, cfg, fileData }: QuartzComponentProps) => {
+    const baseUrl = new URL(`https://${cfg.baseUrl ?? "example.com"}`)
+    const baseDir = fileData.slug === "404" ? baseUrl.pathname : pathToRoot(fileData.slug!)
     const imageSrc = userOpts?.imageSrc
     const imageAlt = userOpts?.imageAlt ?? "Profile image"
     const bio =
       userOpts?.bio ??
       "Write a short bio here. Add your profile image and social links in quartz.layout.ts."
     const links = userOpts?.links ?? defaultLinks
+    const resolveAssetPath = (src?: string) => {
+      if (!src || isAbsoluteURL(src) || !src.startsWith("/")) {
+        return src
+      }
+
+      return joinSegments(baseDir, src)
+    }
 
     return (
       <section class={classNames(displayClass, "profile-card")}>
         {imageSrc ? (
-          <img class="profile-image" src={imageSrc} alt={imageAlt} loading="lazy" />
+          <img class="profile-image" src={resolveAssetPath(imageSrc)} alt={imageAlt} loading="lazy" />
         ) : (
           <div class="profile-image profile-image--placeholder">{imageAlt}</div>
         )}
@@ -53,7 +63,7 @@ export default ((userOpts?: Options) => {
                   {link.iconSrc ? (
                     <img
                       class="profile-link-icon"
-                      src={link.iconSrc}
+                      src={resolveAssetPath(link.iconSrc)}
                       alt={link.iconAlt ?? link.label}
                       loading="lazy"
                     />
